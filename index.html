@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Consuelo · carte</title>
+<meta name="description" content="Crea il tuo mazzo di carte ed estraine una a caso.">
+<meta name="theme-color" content="#f4f1ea">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='14' y='6' width='36' height='52' rx='8' fill='%23e8dfd0'/%3E%3Ccircle cx='32' cy='26' r='10' fill='%23b8d4c0'/%3E%3Cpath d='M18 50 A14 14 0 0 1 46 50Z' fill='%23f2c4b8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..600,0..100,0..1;1,9..144,300..600,0..100,0..1&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#2e3a33;
+    --ink-soft:#5d6a62;
+    --paper:#f7f4ee;
+    --line:rgba(46,58,51,.14);
+    --accent:#4f6f5c;
+    --radius:28px;
+    --serif:"Fraunces", Georgia, serif;
+    --sans:"Instrument Sans", system-ui, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;}
+  body{
+    font-family:var(--sans);color:var(--ink);background:var(--paper);
+    min-height:100dvh;-webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  button,input,textarea{font:inherit;color:inherit}
+  [hidden]{display:none !important}
+
+  /* ---------- sfondo animato ---------- */
+  .bg{position:fixed;inset:0;z-index:-1;overflow:hidden}
+  .bg svg{position:absolute;inset:0;width:100%;height:100%;transition:opacity 1.6s ease}
+  .bg::after,.face::after{
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.35;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .45 0 0 0 0 .4 0 0 0 .18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .bg::before{content:"";position:absolute;inset:0;z-index:1;background:rgba(247,244,238,.38);backdrop-filter:blur(2px)}
+  .f{
+    transform-box:fill-box;transform-origin:center;
+    animation:drift var(--d) ease-in-out var(--delay) infinite alternate;
+  }
+  @keyframes drift{
+    from{transform:translate(0,0) rotate(0deg) scale(1)}
+    to{transform:translate(var(--dx),var(--dy)) rotate(var(--r)) scale(var(--s,1.04))}
+  }
+  @media (prefers-reduced-motion: reduce){ .f{animation:none} }
+
+  /* ---------- layout ---------- */
+  main{max-width:720px;margin:0 auto;padding:max(28px,env(safe-area-inset-top)) 20px 120px}
+  .brand{
+    display:flex;align-items:baseline;gap:10px;text-decoration:none;color:var(--ink);
+    font-family:var(--serif);font-style:italic;font-weight:400;font-size:1.35rem;
+    font-variation-settings:"SOFT" 100,"WONK" 1,"opsz" 48;
+  }
+  .brand small{font-family:var(--sans);font-style:normal;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)}
+  header.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:28px}
+  .glass{
+    background:rgba(255,255,255,.62);
+    backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);
+    border:1px solid rgba(255,255,255,.8);
+    border-radius:var(--radius);
+    box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 20px 50px -30px rgba(46,58,51,.35);
+  }
+  h1,h2{font-family:var(--serif);font-weight:350;letter-spacing:-.01em;margin:0;
+    font-variation-settings:"SOFT" 100,"opsz" 144}
+  .hero h1{font-size:clamp(3rem,13vw,5.6rem);line-height:.95;font-style:italic;font-weight:300}
+  .hero p{font-family:var(--serif);font-size:1.15rem;color:var(--ink-soft);margin:14px 0 34px;max-width:28ch;
+    font-variation-settings:"SOFT" 100,"opsz" 18}
+  .panel-box{padding:24px}
+  label.lbl{display:block;font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:10px}
+  .code-input{
+    width:100%;border:1px solid var(--line);background:rgba(255,255,255,.7);border-radius:18px;
+    padding:16px 18px;font-size:1.5rem;letter-spacing:.22em;text-transform:uppercase;text-align:center;
+    font-family:var(--serif);font-variation-settings:"opsz" 48;outline:none;transition:border-color .2s, box-shadow .2s;
+  }
+  .code-input:focus,.field:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(79,111,92,.12)}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row > *{flex:1}
+  .btn{
+    appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.75);
+    border-radius:999px;padding:13px 20px;cursor:pointer;font-weight:500;font-size:.98rem;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:var(--ink);
+    transition:transform .15s ease, background .2s, box-shadow .2s;white-space:nowrap;
+  }
+  .btn:hover{background:#fff}
+  .btn:active{transform:scale(.97)}
+  .btn.primary{background:var(--ink);color:#f7f4ee;border-color:var(--ink)}
+  .btn.primary:hover{background:#3b4a41}
+  .btn.ghost{background:transparent;border-color:transparent}
+  .btn.ghost:hover{background:rgba(255,255,255,.5)}
+  .btn.small{padding:8px 14px;font-size:.88rem}
+  .btn[disabled]{opacity:.5;pointer-events:none}
+  .divider{display:flex;align-items:center;gap:14px;margin:22px 0;color:var(--ink-soft);font-family:var(--serif);font-style:italic}
+  .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
+  .err{color:#a0503f;font-size:.92rem;margin:12px 2px 0;min-height:1.2em}
+  .recent{margin-top:26px}
+  .recent ul{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+  .recent li a{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;color:var(--ink);
+    padding:12px 16px;border-radius:16px;background:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.7)
+  }
+  .recent li a:hover{background:rgba(255,255,255,.75)}
+  .recent .nm{font-family:var(--serif);font-size:1.05rem}
+  .mono{font-variant-numeric:tabular-nums;letter-spacing:.12em;font-size:.82rem;color:var(--ink-soft)}
+
+  /* ---------- editor ---------- */
+  .field{
+    width:100%;border:1px solid var(--line);background:rgba(255,255,255,.7);border-radius:16px;padding:14px 16px;outline:none;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .deck-name{font-family:var(--serif);font-size:1.6rem;font-variation-settings:"SOFT" 100,"opsz" 72;padding:12px 16px}
+  .codebox{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px 20px;margin-bottom:16px}
+  .codebox .code{font-family:var(--serif);font-size:1.7rem;letter-spacing:.18em;font-variation-settings:"opsz" 72}
+  .codebox p{margin:4px 0 0;font-size:.85rem;color:var(--ink-soft)}
+  .cards-list{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:10px;counter-reset:c}
+  .cards-list li{display:flex;gap:10px;align-items:flex-start;padding:10px 10px 10px 16px;border-radius:20px;
+    background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.85);animation:pop .35s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(6px)}}
+  .cards-list .n{font-family:var(--serif);font-style:italic;color:var(--ink-soft);padding-top:9px;min-width:1.6em;font-size:.95rem}
+  .cards-list textarea{
+    flex:1;border:0;background:transparent;resize:none;outline:none;padding:8px 0;line-height:1.45;
+    font-family:var(--serif);font-size:1.08rem;font-variation-settings:"SOFT" 100,"opsz" 24;min-height:2.4em;overflow:hidden
+  }
+  .icon-btn{appearance:none;border:0;background:transparent;width:36px;height:36px;border-radius:50%;cursor:pointer;color:var(--ink-soft);font-size:1.25rem;line-height:1;flex:none}
+  .icon-btn:hover{background:rgba(46,58,51,.07);color:#a0503f}
+  details.bulk{margin-top:14px}
+  details.bulk summary{cursor:pointer;color:var(--ink-soft);font-size:.92rem;padding:8px 4px;list-style:none}
+  details.bulk summary::before{content:"＋ ";}
+  details.bulk[open] summary::before{content:"－ ";}
+  details.bulk textarea{min-height:140px;margin:6px 0 10px;resize:vertical;line-height:1.5}
+  .savebar{
+    position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);
+    width:min(680px,calc(100% - 24px));display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 10px 10px 20px;z-index:5
+  }
+  .savebar .status{font-size:.88rem;color:var(--ink-soft)}
+  .empty{text-align:center;color:var(--ink-soft);font-family:var(--serif);font-style:italic;padding:24px 0 6px}
+
+  /* ---------- estrazione ---------- */
+  .draw-wrap{display:flex;flex-direction:column;align-items:center;gap:22px}
+  .draw-title{text-align:center}
+  .draw-title h2{font-size:clamp(1.6rem,6vw,2.3rem);font-style:italic;font-weight:300}
+  .draw-title .mono{display:block;margin-top:6px}
+  .stage{perspective:1600px;width:min(84vw,360px)}
+  .card{width:100%;aspect-ratio:2/3;cursor:pointer;container-type:inline-size;-webkit-tap-highlight-color:transparent}
+  .card-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.2,.75,.2,1)}
+  .card.flipped .card-inner{transform:rotateY(180deg)}
+  .card.lift .card-inner{transform:translateY(-14px) rotate(-2deg)}
+  .face{
+    position:absolute;inset:0;border-radius:var(--radius);overflow:hidden;
+    backface-visibility:hidden;-webkit-backface-visibility:hidden;
+    box-shadow:0 30px 60px -28px rgba(46,58,51,.45), 0 0 0 1px rgba(255,255,255,.7) inset;
+    background:#fff;
+  }
+  .face .art{position:absolute;inset:0;width:100%;height:100%}
+  .front{transform:rotateY(180deg)}
+  .frame{position:absolute;inset:4.5cqw;border:1px solid rgba(255,255,255,.85);border-radius:calc(var(--radius) - 10px);pointer-events:none;z-index:2}
+  .back .mark{
+    position:absolute;inset:0;display:grid;place-items:center;z-index:2;
+    font-family:var(--serif);font-style:italic;font-weight:300;font-size:11cqw;color:rgba(46,58,51,.78);
+    font-variation-settings:"SOFT" 100,"WONK" 1,"opsz" 144;
+  }
+  .back .mark span{background:rgba(255,255,255,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:3cqw 8cqw;border-radius:999px}
+  .front .content{
+    position:absolute;inset:9cqw;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:5cqw;
+  }
+  .front .veil{
+    background:rgba(255,255,255,.58);backdrop-filter:blur(14px) saturate(1.1);-webkit-backdrop-filter:blur(14px) saturate(1.1);
+    border-radius:8cqw;padding:9cqw 7cqw 7cqw;max-height:100%;overflow:auto;display:flex;flex-direction:column;align-items:center;gap:4cqw;
+    box-shadow:0 1px 0 rgba(255,255,255,.7) inset;
+  }
+  .sprig{width:13cqw;height:auto;opacity:.75}
+  .txt{
+    margin:0;font-family:var(--serif);font-weight:360;color:var(--ink);line-height:1.22;text-wrap:balance;
+    font-variation-settings:"SOFT" 100,"WONK" 0,"opsz" 72;font-size:var(--fs,8cqw);hyphens:auto;overflow-wrap:anywhere;
+  }
+  .num{font-size:3.2cqw;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-soft)}
+  .draw-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .draw-actions .btn.primary{padding:15px 34px;font-size:1.05rem}
+  .counter{font-size:.88rem;color:var(--ink-soft);text-align:center}
+
+  .toast{
+    position:fixed;left:50%;top:max(16px,env(safe-area-inset-top));transform:translate(-50%,-140%);
+    background:var(--ink);color:#f7f4ee;padding:11px 20px;border-radius:999px;font-size:.92rem;z-index:20;
+    transition:transform .4s cubic-bezier(.2,.8,.2,1);box-shadow:0 10px 30px -10px rgba(0,0,0,.4)
+  }
+  .toast.show{transform:translate(-50%,0)}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .loading{display:grid;place-items:center;padding:80px 0;color:var(--ink-soft)}
+</style>
+</head>
+<body>
+<div class="bg" id="bg"><svg id="bgA" preserveAspectRatio="xMidYMid slice"></svg><svg id="bgB" preserveAspectRatio="xMidYMid slice" style="opacity:0"></svg></div>
+<div class="toast" id="toast"></div>
+
+<main>
+  <header class="top">
+    <a class="brand" href="#/">Consuelo <small>carte</small></a>
+    <nav id="topnav"></nav>
+  </header>
+
+  <!-- HOME -->
+  <section id="view-home" hidden>
+    <div class="hero">
+      <h1>Pesca<br>una carta.</h1>
+      <p>Scrivi le tue frasi, crea un mazzo e lascia che sia il caso a scegliere.</p>
+    </div>
+    <div class="glass panel-box">
+      <label class="lbl" for="codeIn">Hai già un mazzo? Inserisci il codice</label>
+      <input id="codeIn" class="code-input" placeholder="XXXX-XXXX" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <div class="row" style="margin-top:12px">
+        <button class="btn primary" id="goDraw">Estrai</button>
+        <button class="btn" id="goEdit">Modifica</button>
+      </div>
+      <div class="err" id="homeErr"></div>
+      <div class="divider">oppure</div>
+      <a class="btn" href="#/nuovo" style="width:100%">✦ Crea un nuovo mazzo</a>
+    </div>
+    <div class="recent" id="recent" hidden>
+      <label class="lbl">I tuoi mazzi su questo dispositivo</label>
+      <ul id="recentList"></ul>
+    </div>
+  </section>
+
+  <!-- EDITOR -->
+  <section id="view-edit" hidden>
+    <div class="glass codebox" id="codeBox" hidden>
+      <div>
+        <label class="lbl" style="margin:0">Codice del mazzo</label>
+        <div class="code" id="codeShow"></div>
+        <p>Conservalo: serve per estrarre e per modificare questo mazzo.</p>
+      </div>
+      <div class="row" style="flex:none;gap:8px">
+        <button class="btn small" id="copyCode">Copia codice</button>
+        <button class="btn small" id="copyLink">Copia link</button>
+      </div>
+    </div>
+    <input class="field deck-name" id="deckName" placeholder="Nome del mazzo" maxlength="80">
+    <ul class="cards-list" id="cardsList"></ul>
+    <div class="empty" id="emptyMsg">Il mazzo è vuoto. Aggiungi la prima carta.</div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn" id="addCard">＋ Aggiungi carta</button>
+    </div>
+    <details class="bulk">
+      <summary>Incolla più carte insieme (una per riga)</summary>
+      <textarea class="field" id="bulkIn" placeholder="Una frase per riga…"></textarea>
+      <button class="btn small" id="bulkAdd">Aggiungi al mazzo</button>
+    </details>
+    <div class="glass savebar">
+      <span class="status" id="saveStatus">0 carte</span>
+      <div class="row" style="flex:none;gap:8px">
+        <a class="btn ghost small" id="toDraw" hidden>Estrai ↗</a>
+        <button class="btn primary" id="saveBtn">Salva</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ESTRAZIONE -->
+  <section id="view-draw" hidden>
+    <div class="draw-wrap">
+      <div class="draw-title">
+        <h2 id="drawName"></h2>
+        <span class="mono" id="drawCode"></span>
+      </div>
+      <div class="stage">
+        <div class="card" id="card" role="button" tabindex="0" aria-label="Estrai una carta">
+          <div class="card-inner">
+            <div class="face back">
+              <svg class="art" id="backArt" viewBox="0 0 300 450" preserveAspectRatio="xMidYMid slice"></svg>
+              <div class="frame"></div>
+              <div class="mark"><span>Consuelo</span></div>
+            </div>
+            <div class="face front">
+              <svg class="art" id="frontArt" viewBox="0 0 300 450" preserveAspectRatio="xMidYMid slice"></svg>
+              <div class="frame"></div>
+              <div class="content">
+                <div class="veil">
+                  <svg class="sprig" viewBox="0 0 60 30" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" style="color:var(--accent)">
+                    <path d="M4 22 C20 22 40 18 56 8"/>
+                    <path d="M18 21 C16 14 20 9 26 7 C27 13 24 18 18 21Z" fill="currentColor" fill-opacity=".18"/>
+                    <path d="M32 18 C33 11 38 8 44 8 C43 14 39 17 32 18Z" fill="currentColor" fill-opacity=".18"/>
+                    <path d="M26 20 C30 25 36 26 41 24 C37 20 32 19 26 20Z" fill="currentColor" fill-opacity=".18"/>
+                    <circle cx="56" cy="8" r="1.6" fill="currentColor"/>
+                  </svg>
+                  <p class="txt" id="cardText"></p>
+                  <span class="num" id="cardNum"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="draw-actions">
+        <button class="btn primary" id="drawBtn">Estrai una carta</button>
+        <button class="btn ghost small" id="shuffleBtn">↻ Rimescola</button>
+      </div>
+      <div class="counter" id="counter"></div>
+    </div>
+  </section>
+
+  <div class="loading" id="view-loading" hidden><span class="spin"></span></div>
+</main>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+  /* ================= generatore d'arte ================= */
+  function rng(seed){
+    return () => {
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const rand = () => (Math.random() * 2 ** 32) >>> 0;
+
+  function palette(r){
+    const h = r() * 360;
+    // schemi armonici: analogo, complementare morbido, triadico
+    const schemes = [
+      [0, 28, 56, 180, 205],
+      [0, 150, 175, 30, -30],
+      [0, 120, 240, 20, 140],
+      [0, -40, 40, 200, 10],
+    ];
+    const sc = schemes[Math.floor(r() * schemes.length)];
+    const cols = sc.map(o => `hsl(${((h + o) % 360 + 360) % 360} ${32 + r() * 24}% ${80 + r() * 9}%)`);
+    const deep = sc.slice(0, 3).map(o => `hsl(${((h + o) % 360 + 360) % 360} ${30 + r() * 25}% ${58 + r() * 10}%)`);
+    const bg = `hsl(${(h + r() * 60) % 360} ${30 + r() * 30}% ${93 + r() * 4}%)`;
+    return { bg, cols, deep };
+  }
+
+  function art(w, h, opts = {}){
+    const r = rng(opts.seed ?? rand());
+    const p = palette(r);
+    const pick = (a) => a[Math.floor(r() * a.length)];
+    const m = Math.min(w, h);
+    const f = (n) => n.toFixed(1);
+    let out = `<rect width="${w}" height="${h}" fill="${p.bg}"/>`;
+
+    const big = ["circle", "half", "quarter", "rect", "arch", "pill", "circle", "half"];
+    const small = ["ring", "dots", "wave", "tri", "circle", "plus", "ring"];
+    const nBig = opts.big ?? 5 + Math.floor(r() * 3);
+    const nSmall = opts.small ?? 4 + Math.floor(r() * 4);
+
+    const shape = (k, s) => {
+      const c = pick(p.cols), c2 = pick(p.cols), d = pick(p.deep);
+      switch (k) {
+        case "circle": return `<circle r="${f(s/2)}" fill="${c}"/>`;
+        case "half": return `<path d="M${f(-s/2)} 0A${f(s/2)} ${f(s/2)} 0 0 1 ${f(s/2)} 0Z" fill="${c}"/>`;
+        case "quarter": return `<path d="M${f(-s/4)} ${f(-s/4)}L${f(s*.6)} ${f(-s/4)}A${f(s*.85)} ${f(s*.85)} 0 0 1 ${f(-s/4)} ${f(s*.6)}Z" fill="${c}"/>`;
+        case "rect": return `<rect x="${f(-s/2)}" y="${f(-s*.35)}" width="${f(s)}" height="${f(s*.7)}" rx="${f(s*.12)}" fill="${c}"/>`;
+        case "pill": return `<rect x="${f(-s*.6)}" y="${f(-s*.18)}" width="${f(s*1.2)}" height="${f(s*.36)}" rx="${f(s*.18)}" fill="${c}"/>`;
+        case "arch": {
+          let g = ""; const bands = 3 + Math.floor(r() * 2); const sw = s / (bands * 2.4);
+          for (let i = 0; i < bands; i++) {
+            const rr = s/2 - i * sw * 1.25 - sw/2;
+            if (rr <= sw) break;
+            g += `<path d="M${f(-rr)} 0A${f(rr)} ${f(rr)} 0 0 1 ${f(rr)} 0" fill="none" stroke="${i % 2 ? c2 : c}" stroke-width="${f(sw)}"/>`;
+          }
+          return g;
+        }
+        case "ring": return `<circle r="${f(s/2)}" fill="none" stroke="${d}" stroke-width="${f(Math.max(1.2, s*.05))}"/>`;
+        case "dots": {
+          let g = ""; const n = 4 + Math.floor(r() * 2), gap = s / n, rad = Math.max(1.1, s * .028);
+          for (let i = 0; i < n; i++) for (let j = 0; j < n; j++)
+            g += `<circle cx="${f(i*gap - s/2 + gap/2)}" cy="${f(j*gap - s/2 + gap/2)}" r="${f(rad)}" fill="${d}"/>`;
+          return g;
+        }
+        case "wave": {
+          const n = 4, seg = s / n, a = s * .1;
+          let dd = `M${f(-s/2)} 0`;
+          for (let i = 0; i < n; i++) dd += `q${f(seg/2)} ${f(i % 2 ? a : -a)} ${f(seg)} 0`;
+          return `<path d="${dd}" fill="none" stroke="${d}" stroke-width="${f(Math.max(1.2, s*.035))}" stroke-linecap="round"/>`;
+        }
+        case "tri": return `<path d="M0 ${f(-s/2)}L${f(s*.45)} ${f(s*.3)}L${f(-s*.45)} ${f(s*.3)}Z" fill="${c}"/>`;
+        case "plus": {
+          const t = s * .12, l = s * .35;
+          return `<path d="M${f(-l)} 0H${f(l)}M0 ${f(-l)}V${f(l)}" stroke="${d}" stroke-width="${f(Math.max(1.2,t*.4))}" stroke-linecap="round"/>`;
+        }
+      }
+      return "";
+    };
+
+    const place = (k, s, idx, total) => {
+      // distribuzione morbida: griglia irregolare per evitare ammassi
+      const cols = Math.ceil(Math.sqrt(total * w / h)), rows = Math.ceil(total / cols);
+      const cx = ((idx % cols) + .5 + (r() - .5) * 1.1) * (w / cols);
+      const cy = ((Math.floor(idx / cols)) + .5 + (r() - .5) * 1.1) * (h / rows);
+      const rot = Math.floor(r() * 4) * 90 + (r() < .35 ? (r() - .5) * 40 : 0);
+      const dx = (r() - .5) * m * .14, dy = (r() - .5) * m * .14;
+      const rr = (r() - .5) * 36, dur = 16 + r() * 26, del = -r() * dur, sc = 1 + (r() - .3) * .12;
+      return `<g class="f" style="--dx:${f(dx)}px;--dy:${f(dy)}px;--r:${f(rr)}deg;--s:${sc.toFixed(3)};--d:${f(dur)}s;--delay:${f(del)}s">`
+           + `<g transform="translate(${f(cx)} ${f(cy)}) rotate(${f(rot)})" opacity="${(.72 + r() * .28).toFixed(2)}">${shape(k, s)}</g></g>`;
+    };
+
+    const order = [...Array(nBig).keys()].sort(() => r() - .5);
+    order.forEach((idx, i) => out += place(pick(big), m * (.42 + r() * .5), idx, nBig));
+    const order2 = [...Array(nSmall).keys()].sort(() => r() - .5);
+    order2.forEach((idx) => out += place(pick(small), m * (.12 + r() * .2), idx, nSmall));
+    return out;
+  }
+
+  // sfondo pagina con dissolvenza tra due livelli
+  let bgFront = $("#bgA"), bgBack = $("#bgB");
+  function paintBg(){
+    const w = 1600, h = Math.round(1600 * innerHeight / Math.max(innerWidth, 1));
+    bgBack.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    bgBack.innerHTML = art(w, h, { big: 7, small: 7 });
+    bgBack.style.opacity = 1; bgFront.style.opacity = 0;
+    [bgFront, bgBack] = [bgBack, bgFront];
+  }
+
+  /* ================= utilità ================= */
+  const toastEl = $("#toast"); let toastT;
+  function toast(msg){
+    toastEl.textContent = msg; toastEl.classList.add("show");
+    clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove("show"), 2200);
+  }
+  const normCode = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const validCode = (c) => c.length === 8 && [...c].every(ch => ALPHABET.includes(ch));
+  const fmtCode = (c) => c.slice(0, 4) + "-" + c.slice(4);
+  const esc = (s) => String(s).replace(/[&<>"']/g, ch => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[ch]));
+
+  async function api(method, code, body){
+    const url = "/api/deck" + (code ? `?code=${encodeURIComponent(code)}` : "");
+    const r = await fetch(url, {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const d = await r.json().catch(() => ({ error: "Errore di rete" }));
+    if (!r.ok) throw new Error(d.error || "Errore");
+    return d;
+  }
+
+  async function copy(text, msg){
+    try { await navigator.clipboard.writeText(text); toast(msg); }
+    catch { prompt("Copia:", text); }
+  }
+
+  // mazzi recenti su questo dispositivo (solo per comodità)
+  const RKEY = "consuelo.recent";
+  const getRecent = () => { try { return JSON.parse(localStorage.getItem(RKEY)) || []; } catch { return []; } };
+  function remember(code, name){
+    try {
+      const list = getRecent().filter(x => x.code !== code);
+      list.unshift({ code, name: name || "Mazzo senza nome", t: Date.now() });
+      localStorage.setItem(RKEY, JSON.stringify(list.slice(0, 10)));
+    } catch {}
+  }
+  function forget(code){
+    try { localStorage.setItem(RKEY, JSON.stringify(getRecent().filter(x => x.code !== code))); } catch {}
+  }
+
+  /* ================= viste ================= */
+  const views = ["home", "edit", "draw", "loading"];
+  function show(v){
+    views.forEach(n => $("#view-" + n).hidden = n !== v);
+    window.scrollTo({ top: 0 });
+  }
+  function setNav(html){ $("#topnav").innerHTML = html; }
+
+  /* ---------- HOME ---------- */
+  function showHome(){
+    setNav("");
+    show("home");
+    $("#homeErr").textContent = "";
+    const list = getRecent();
+    $("#recent").hidden = !list.length;
+    $("#recentList").innerHTML = list.map(x =>
+      `<li><a href="#/mazzo/${x.code}"><span class="nm">${esc(x.name)}</span><span class="mono">${fmtCode(x.code)}</span></a></li>`
+    ).join("");
+  }
+  const codeIn = $("#codeIn");
+  codeIn.addEventListener("input", () => {
+    let c = normCode(codeIn.value).slice(0, 8);
+    codeIn.value = c.length > 4 ? fmtCode(c) : c;
+    $("#homeErr").textContent = "";
+  });
+  function goWithCode(view){
+    const c = normCode(codeIn.value);
+    if (!validCode(c)) { $("#homeErr").textContent = "Il codice ha 8 caratteri, ad esempio ABCD-2345."; return; }
+    location.hash = `#/${view}/${c}`;
+  }
+  $("#goDraw").onclick = () => goWithCode("mazzo");
+  $("#goEdit").onclick = () => goWithCode("modifica");
+  codeIn.addEventListener("keydown", e => { if (e.key === "Enter") goWithCode("mazzo"); });
+
+  /* ---------- EDITOR ---------- */
+  const ed = { code: null, cards: [], dirty: false, saving: false };
+  const list = $("#cardsList");
+
+  function autosize(t){ t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }
+  function renderCards(focusIdx){
+    list.innerHTML = ed.cards.map((c, i) =>
+      `<li data-i="${i}"><span class="n">${i + 1}</span><textarea rows="1" placeholder="Scrivi la frase della carta…">${esc(c)}</textarea><button class="icon-btn" title="Elimina carta" aria-label="Elimina carta">×</button></li>`
+    ).join("");
+    list.querySelectorAll("textarea").forEach(autosize);
+    $("#emptyMsg").hidden = ed.cards.length > 0;
+    if (focusIdx != null) list.querySelectorAll("textarea")[focusIdx]?.focus();
+    updateStatus();
+  }
+  function updateStatus(){
+    const n = ed.cards.filter(c => c.trim()).length;
+    $("#saveStatus").textContent = `${n} ${n === 1 ? "carta" : "carte"}` + (ed.dirty ? " · non salvato" : (ed.code ? " · salvato ✓" : ""));
+  }
+  function markDirty(){ ed.dirty = true; updateStatus(); }
+
+  list.addEventListener("input", e => {
+    if (e.target.tagName !== "TEXTAREA") return;
+    const i = +e.target.closest("li").dataset.i;
+    ed.cards[i] = e.target.value; autosize(e.target); markDirty();
+  });
+  list.addEventListener("keydown", e => {
+    if (e.target.tagName === "TEXTAREA" && e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const i = +e.target.closest("li").dataset.i;
+      ed.cards.splice(i + 1, 0, ""); renderCards(i + 1); markDirty();
+    }
+  });
+  list.addEventListener("click", e => {
+    if (!e.target.classList.contains("icon-btn")) return;
+    const i = +e.target.closest("li").dataset.i;
+    ed.cards.splice(i, 1); renderCards(); markDirty();
+  });
+  $("#addCard").onclick = () => { ed.cards.push(""); renderCards(ed.cards.length - 1); markDirty(); };
+  $("#bulkAdd").onclick = () => {
+    const lines = $("#bulkIn").value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    if (!lines.length) return;
+    ed.cards = ed.cards.filter(c => c.trim()).concat(lines);
+    $("#bulkIn").value = ""; $(".bulk").open = false;
+    renderCards(); markDirty(); toast(`${lines.length} carte aggiunte`);
+  };
+  $("#deckName").addEventListener("input", markDirty);
+
+  function showCodeBox(){
+    $("#codeBox").hidden = !ed.code;
+    $("#toDraw").hidden = !ed.code;
+    if (ed.code) {
+      $("#codeShow").textContent = fmtCode(ed.code);
+      $("#toDraw").href = `#/mazzo/${ed.code}`;
+    }
+  }
+  $("#copyCode").onclick = () => copy(fmtCode(ed.code), "Codice copiato");
+  $("#copyLink").onclick = () => copy(`${location.origin}/#/mazzo/${ed.code}`, "Link copiato");
+
+  $("#saveBtn").onclick = async () => {
+    if (ed.saving) return;
+    const cards = ed.cards.map(c => c.trim()).filter(Boolean);
+    const name = $("#deckName").value.trim();
+    if (!cards.length) { toast("Aggiungi almeno una carta"); return; }
+    ed.saving = true;
+    const btn = $("#saveBtn"); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+    try {
+      const res = ed.code ? await api("PUT", ed.code, { name, cards }) : await api("POST", null, { name, cards });
+      const isNew = !ed.code;
+      ed.code = res.code; ed.cards = res.cards; ed.dirty = false;
+      remember(ed.code, name);
+      renderCards(); showCodeBox();
+      if (isNew) {
+        history.replaceState(null, "", `#/modifica/${ed.code}`);
+        setNav(editNav());
+        toast("Mazzo creato ✓");
+      } else toast("Salvato");
+    } catch (e) {
+      toast(e.message);
+    } finally {
+      ed.saving = false; btn.disabled = false; btn.textContent = "Salva";
+    }
+  };
+  const editNav = () => ed.code ? `<a class="btn small" href="#/mazzo/${ed.code}">Estrai ↗</a>` : "";
+
+  async function showEdit(code){
+    if (code) {
+      show("loading");
+      try {
+        const d = await api("GET", code);
+        ed.code = d.code; ed.cards = d.cards.slice(); $("#deckName").value = d.name || "";
+        remember(d.code, d.name);
+      } catch (e) {
+        if (/non trovato/i.test(e.message)) forget(code);
+        showHome(); $("#homeErr").textContent = e.message; return;
+      }
+    } else {
+      ed.code = null; ed.cards = ["", "", ""]; $("#deckName").value = "";
+    }
+    ed.dirty = false;
+    setNav(editNav());
+    show("edit"); renderCards(code ? null : 0); showCodeBox();
+  }
+
+  addEventListener("beforeunload", e => { if (ed.dirty && !$("#view-edit").hidden) { e.preventDefault(); e.returnValue = ""; } });
+
+  /* ---------- ESTRAZIONE ---------- */
+  const dr = { deck: null, pool: [], last: -1, drawn: 0, busy: false };
+  const card = $("#card");
+
+  function reshuffle(){
+    const idx = dr.deck.cards.map((_, i) => i);
+    for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+    // evita di ripescare subito l'ultima carta
+    if (idx.length > 1 && idx[idx.length - 1] === dr.last) [idx[0], idx[idx.length - 1]] = [idx[idx.length - 1], idx[0]];
+    dr.pool = idx; dr.drawn = 0;
+  }
+  function updateCounter(){
+    const n = dr.deck.cards.length;
+    $("#counter").textContent = dr.drawn ? `${dr.drawn} di ${n} estratte` : `${n} ${n === 1 ? "carta" : "carte"} nel mazzo`;
+  }
+  function fitText(t){
+    const L = t.length;
+    const fs = L < 30 ? 9.5 : L < 60 ? 8 : L < 110 ? 6.8 : L < 180 ? 5.8 : L < 260 ? 5 : 4.4;
+    $("#cardText").style.setProperty("--fs", fs + "cqw");
+  }
+  const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+  async function draw(){
+    if (dr.busy || !dr.deck?.cards.length) return;
+    dr.busy = true;
+    if (!dr.pool.length) { reshuffle(); if (dr.last >= 0) toast("Mazzo rimescolato"); }
+    const i = dr.pool.pop(); dr.last = i; dr.drawn++;
+
+    if (card.classList.contains("flipped")) {
+      card.classList.remove("flipped");
+      await wait(520);
+      $("#backArt").innerHTML = art(300, 450);
+    } else {
+      card.classList.add("lift"); await wait(180); card.classList.remove("lift");
+    }
+    const text = dr.deck.cards[i];
+    $("#frontArt").innerHTML = art(300, 450);
+    $("#cardText").textContent = text; fitText(text);
+    $("#cardNum").textContent = `N° ${i + 1}`;
+    card.classList.add("flipped");
+    paintBg();
+    updateCounter();
+    await wait(900);
+    dr.busy = false;
+  }
+  card.addEventListener("click", draw);
+  card.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); draw(); } });
+  $("#drawBtn").onclick = draw;
+  $("#shuffleBtn").onclick = async () => {
+    if (dr.busy) return;
+    dr.last = -1; reshuffle();
+    if (card.classList.contains("flipped")) { card.classList.remove("flipped"); await wait(500); }
+    $("#backArt").innerHTML = art(300, 450); paintBg();
+    updateCounter(); toast("Mazzo rimescolato");
+  };
+
+  async function showDraw(code){
+    show("loading");
+    try {
+      dr.deck = await api("GET", code);
+      remember(dr.deck.code, dr.deck.name);
+    } catch (e) {
+      if (/non trovato/i.test(e.message)) forget(code);
+      showHome(); $("#homeErr").textContent = e.message; return;
+    }
+    setNav(`<a class="btn small ghost" href="#/modifica/${dr.deck.code}">Modifica</a>`);
+    $("#drawName").textContent = dr.deck.name || "Il tuo mazzo";
+    $("#drawCode").textContent = fmtCode(dr.deck.code);
+    card.classList.remove("flipped");
+    $("#backArt").innerHTML = art(300, 450);
+    dr.last = -1; reshuffle(); updateCounter();
+    $("#drawBtn").disabled = !dr.deck.cards.length;
+    show("draw");
+  }
+
+  /* ---------- router ---------- */
+  function route(){
+    const [, view, raw] = location.hash.replace(/^#/, "").split("/");
+    const code = normCode(raw);
+    if (view === "nuovo") showEdit(null);
+    else if (view === "modifica" && validCode(code)) showEdit(code);
+    else if (view === "mazzo" && validCode(code)) showDraw(code);
+    else showHome();
+  }
+  addEventListener("hashchange", route);
+  paintBg();
+  route();
+})();
+</script>
+</body>
+</html>

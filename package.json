@@ -1,0 +1,8 @@
+{
+  "name": "consuelocard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Mazzi di carte personali da estrarre a caso",
+  "engines": { "node": ">=18" }
+}
